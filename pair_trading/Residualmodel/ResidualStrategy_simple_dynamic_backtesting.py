@@ -1,7 +1,7 @@
 from datetime import datetime
 from vnpy.app.portfolio_strategy import BacktestingEngine
 from vnpy.trader.constant import Interval
-from residualmodel_dynamic import DynamicResidualModelStrategy
+from ResidualStrategy_simple_dynamic import DynamicResidualModelStrategy
 # from trend_following_version1 import ATR_RSI_Strategy
 # from portfolio_signals import TredningFollowingSignals
 # from portfolio_masignals import MASignals

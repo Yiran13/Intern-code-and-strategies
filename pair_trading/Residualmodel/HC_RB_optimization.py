@@ -115,7 +115,7 @@ def run_optimization(strategy_settings:dict,
 
 
 if __name__ == '__main__':
-# 初始化基本配置
+   # 初始化基本配置
     strategy_settings = {}
     strategy_settings['strategy_class'] = DynamicResidualModelStrategy
     strategy_settings['vt_symbols'] = ["HC888.SHFE", 'RB888.SHFE']
@@ -129,10 +129,20 @@ if __name__ == '__main__':
     strategy_settings['capital'] = 1_000_0,
     strategy_settings['collection_names'] = {"HC888.SHFE":"HC888", "RB888.SHFE":"RB888"}
 
-    # 主要参数
-    short_entry_multiplier_list = [2,3,4,5,6]
-    difference_filter_num_list = [20,40,60,80]
-    std_window_list = [30,60,90,120,150,180]
+    # # 主要参数 第一次优化
+    # short_entry_multiplier_list = [2,3,4,5,6]
+    # difference_filter_num_list = [20,40,60,80]
+    # std_window_list = [30,60,90,120,150,180]
+    
+    # 主要参数 第二次优化
+    short_entry_multiplier_list = [3,4]
+    difference_filter_num_list = [30,35,40,45,50,55,60]
+    std_window_list = [60,70,80,90,100,110,120]
+
+    # 主要参数 第三次优化
+    short_entry_multiplier_list = [2.5,3.5,4.5]
+    difference_filter_num_list = [20,25,30,35,40,45,50,55]
+    std_window_list = [70,80,90,100,110]
 
     # 主要参数池
     product_pool = list(product(short_entry_multiplier_list,difference_filter_num_list,std_window_list))
@@ -180,4 +190,4 @@ if __name__ == '__main__':
     result_df = pd.DataFrame({'param':param_array,'sharpe_ratio':sharpe_array,'max_ddpercent':ddp_array,
                             'max_drawdown_duration':dd_array, 'daily_trade_count': dtc_array})
     result_df.sort_values('sharpe_ratio',ascending=False,inplace=True)    
-    result_df.to_csv('HC_RB_optimization.csv',index=False)
+    result_df.to_csv('HC_RB_optimization_3.csv',index=False)

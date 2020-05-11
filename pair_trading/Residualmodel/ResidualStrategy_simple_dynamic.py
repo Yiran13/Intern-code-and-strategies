@@ -38,37 +38,32 @@ class DynamicResidualModelStrategy(StrategyTemplate):
     # 策略内动态调整周期
     renew_interval: int = 7
     hedge_ratio_window: int = 90
-    
-    # 做空价差入场和止盈
-    short_entry_multiplier: float = 3.5
-    short_exit_multiplier: float = 0
-    
-    # 做多价差入场和止盈
-    long_entry_multiplier: float = -3.5
-    long_exit_multiplier: float = -0
-    
+
+    #轨道宽度
+    entry_multiplier: float = 3.5
+
+
     # 预期价差盈利
     difference_filter_num: float = 30
-    # 止损价差
-    difference_exit_num: float = 15
-    
+    # 预期止盈为预期价差盈利的1/2
+
     # 指标计算参数
     std_window = 70
-    mean_window = 35
-    
+
+
     #固定下单单位
     fixed_size = 1
     x_fixed_size: float = None
     y_fixed_size: float = None
-    
+
     #价差值
     spread_value: float = 0
-    
+
     # 用来过滤交易量低的情况
     spread_volume_threshold = 30
     spread_volume: float = 0
     spread_volume_filter: bool = False
-    
+
     # 进场，出场点位的缓存
     spread_long_entry: float = 0
     spread_long_exit: float = 0
@@ -77,7 +72,7 @@ class DynamicResidualModelStrategy(StrategyTemplate):
     spread_short_entry: float = 0
     spread_short_exit: float = 0
     spread_short_loss_exit: float =0
-    
+
     #用来判断操作价差的方向
     open_direction_dict: Dict[str, float] = {}
     close_direction_dict: Dict[str, float] = {}
@@ -86,25 +81,17 @@ class DynamicResidualModelStrategy(StrategyTemplate):
     last_renew_date: datetime = None
     renew_date: datetime = None
     renew_status: bool = False
-    
+
     # 用来进行预期价差收益过滤
     price_diff: bool = False
-
-
-
 
     parameters = [
         "renew_interval",
         "hedge_ratio_window",
-        'short_entry_multiplier',
-        "short_exit_multiplier",
-        "long_entry_multiplier",
-        "long_exit_multiplier",
+        'entry_multiplier',
         "fixed_size",
         "std_window",
-        "mean_window",
-        "difference_filter_num",
-        "difference_exit_num"
+        "difference_filter_num"
     ]
     variables = ["x_multiplier","y_multiplier","spread_value","spread_long_entry","spread_long_exit","spread_long_loss_exit"
     "spread_short_entry", "spread_short_exit","spread_short_loss_exit","spread_volume_filter"]
@@ -118,6 +105,16 @@ class DynamicResidualModelStrategy(StrategyTemplate):
     ):
         """"""
         super().__init__(strategy_engine, strategy_name, vt_symbols, setting)
+
+        self.short_entry_multiplier = abs(self.entry_multiplier)
+        self.short_exit_multiplier = 0
+
+        self.long_entry_multiplier =  -abs(self.entry_multiplier)
+        self.long_exit_multiplier = 0
+
+        self.mean_window = int(self.std_window / 2)
+
+        self.difference_exit_num = self.difference_filter_num / 2
 
         self.y_symbol = self.vt_symbols[0]
         self.x_symbol = self.vt_symbols[1]
@@ -201,13 +198,13 @@ class DynamicResidualModelStrategy(StrategyTemplate):
 
         # 预期收益筛选
         if np.abs(spread_long_entry - spred_long_exit) >= self.difference_filter_num:
-    
+
             self.spread_long_entry = spread_long_entry
             # self.spread_long_exit = spred_long_exit
 
         else:
             self.spread_long_entry = None
-       
+
         # 计算是否满足作空价差要求
         spread_short_entry = mean + self.short_entry_multiplier * std
         spread_short_exit = mean + self.short_exit_multiplier * std
@@ -217,11 +214,11 @@ class DynamicResidualModelStrategy(StrategyTemplate):
 
             self.spread_short_enrtry = spread_short_entry
             #  self.spread_short_exit = spred_short_exit
-            
+
 
         else:
             self.spread_short_enrtry = None
-            
+
         # 获取每个品种持仓
         x_pos = self.get_pos(self.x_symbol)
         y_pos = self.get_pos(self.y_symbol)
@@ -229,13 +226,13 @@ class DynamicResidualModelStrategy(StrategyTemplate):
 
         # 平仓逻辑判断(平仓之后,在当前bar中不会再开仓),通过判断open_direction的方向来判断是做多还是做空价差
         if self.open_direction_dict['y_symbol'] == 1 and self.open_direction_dict['x_symbol'] == -1:
-            
+
             # 更新hedge ratio之后对当前仓位进行清空，当前bar不进行操作
             if self.renew_status:
 
                 self.sell(self.y_symbol, bars[self.y_symbol].close_price*0.95, np.abs(y_pos))
                 self.cover(self.x_symbol,bars[self.x_symbol].close_price*1.05, np.abs(x_pos))
-                
+
                 self.open_direction_dict['y_symbol'] = 0
                 self.open_direction_dict['x_symbol'] = 0
 
@@ -273,13 +270,13 @@ class DynamicResidualModelStrategy(StrategyTemplate):
                 return
 
         elif self.open_direction_dict['y_symbol'] == -1 and self.open_direction_dict['x_symbol'] == 1:
-            
+
             # 更新hedge ratio之后对当前仓位进行清空，当前bar不进行操作
             if self.renew_status:
 
                 self.cover(self.y_symbol, bars[self.y_symbol].close_price*1.05, np.abs(y_pos))
                 self.sell(self.x_symbol,bars[self.x_symbol].close_price*0.95, np.abs(x_pos))
-                
+
                 self.open_direction_dict['y_symbol'] = 0
                 self.open_direction_dict['x_symbol'] = 0
 
@@ -314,7 +311,7 @@ class DynamicResidualModelStrategy(StrategyTemplate):
                 self.close_direction_dict['x_symbol'] = -1
                 print(f'时间{bars[self.y_symbol].datetime}','空平 止损',f'平空{self.y_symbol} {self.y_fixed_size} 手 平多{self.x_symbol} {self.x_fixed_size} 手',f'价差{self.price_diff}')
                 return
-            
+
 
 
         # 开仓逻辑判断，只有两个品种都是空仓的时候才会进行开仓
@@ -346,23 +343,23 @@ class DynamicResidualModelStrategy(StrategyTemplate):
                 self.close_direction_dict['x_symbol'] = 0
                 #退出点位
                 self.spread_short_exit = mean + self.short_exit_multiplier * std
-                self.spread_short_loss_exit = self.spread_value + self.difference_exit_num 
+                self.spread_short_loss_exit = self.spread_value + self.difference_exit_num
                 print(f'时间{bars[self.y_symbol].datetime}','空开',f'空{self.y_symbol} {self.y_fixed_size} 手 多{self.x_symbol} {self.x_fixed_size} 手',f'价差{self.price_diff}')
 
-    
+
     def renew_hedge_ratio(self,bar:BarData):
         """
-        renew the hedge ratio 
+        renew the hedge ratio
         based on the passed days including the not trading days.
 
         """
         # 计算动态调参时间
         if not self.last_renew_date:
-            
+
             self.last_renew_date = bar.datetime
             self.renew_date = self.last_renew_date + timedelta(days=self.renew_interval)
-            return 
-       
+            return
+
 
         # 动态调参时间
         if bar.datetime >=  self.renew_date:
@@ -397,11 +394,3 @@ class DynamicResidualModelStrategy(StrategyTemplate):
             self.renew_status = True
         else:
             self.renew_status = False
-
-
-    
-
- 
-
-        
-       
