@@ -29,6 +29,9 @@ class DynamicResidualModelStrategy(StrategyTemplate):
     x_symbol: str = None
     y_symbol: str = None
 
+    bar_interval = 5
+    bar_frequency = Interval.MINUTE
+
 
     # 策略内动态调整
     x_multiplier: float = 0
@@ -36,19 +39,19 @@ class DynamicResidualModelStrategy(StrategyTemplate):
     intercept: float = 0
 
     # 策略内动态调整周期
-    renew_interval: int = 7
-    hedge_ratio_window: int = 90
+    renew_interval: int = 30
+    hedge_ratio_window: int = 240
 
     #轨道宽度
-    entry_multiplier: float = 3.5
+    entry_multiplier: float = 2.5
 
 
     # 预期价差盈利
-    difference_filter_num: float = 30
+    difference_filter_num: float = 20
     # 预期止盈为预期价差盈利的1/2
 
     # 指标计算参数
-    std_window = 80
+    std_window = 30
 
 
     #固定下单单位
@@ -112,7 +115,7 @@ class DynamicResidualModelStrategy(StrategyTemplate):
         self.long_entry_multiplier =  -abs(self.entry_multiplier)
         self.long_exit_multiplier = 0
 
-        self.mean_window = int(self.std_window / 2)
+        self.mean_window = int(self.std_window / 1.5)
 
         self.difference_exit_num = self.difference_filter_num / 2
 
@@ -128,12 +131,20 @@ class DynamicResidualModelStrategy(StrategyTemplate):
 
         self.close_direction_dict['x_symbol'] = 0
         self.close_direction_dict['y_symbol'] = 0
+        
 
+        # 单品种K线合成class
+        self.bars = {}
+        for vt_symbol in self.vt_symbols:
+            self.bars[vt_symbol] = Single_bar(self,vt_symbol)
+        
+        # 用来计算是否合成了一根bar
+        self.bar_count = 1 
 
         # 实例化缓存期货品种价格序列容器
         self.ams:Dict = {}
-        self.ams[self.y_symbol] = ArrayManager(size=self.hedge_ratio_window + 50)
-        self.ams[self.x_symbol] = ArrayManager(size=self.hedge_ratio_window + 50)
+        self.ams[self.y_symbol] = self.bars[self.y_symbol].am
+        self.ams[self.x_symbol] = self.bars[self.x_symbol].am
         # 实例化缓存价差价格序列容器
         self.sam = SpreadArrayManager(size=max(self.std_window,self.mean_window)+50)
 
@@ -158,14 +169,26 @@ class DynamicResidualModelStrategy(StrategyTemplate):
         Callback when strategy is stopped.
         """
         self.write_log("策略停止")
-
-
+    
     def on_bars(self, bars: Dict[str, BarData]):
         """"""
+        # 更新1分钟k线
+        for vt_symbol in bars:
+            
+            self.bars[vt_symbol].on_bar(bars[vt_symbol])
+
+        y_bar_count = self.bars[self.y_symbol].bar_count
+        x_bar_count = self.bars[self.x_symbol].bar_count
+        
+        #　判断逻辑
+        if self.bar_count == y_bar_count and self.bar_count == x_bar_count:
+            self.bar_count += 1
+            self.on_5min_bars(bars)
+
+
+    def on_5min_bars(self, bars: Dict[str, BarData]):
+        """"""
         self.cancel_all()
-        # OLS动态线性回归，需要缓存close_array
-        self.ams[self.y_symbol].update_bar(bars[self.y_symbol])
-        self.ams[self.x_symbol].update_bar(bars[self.x_symbol])
         # 动态线性回归函数
         self.renew_hedge_ratio(bars[self.y_symbol])
 
@@ -394,3 +417,42 @@ class DynamicResidualModelStrategy(StrategyTemplate):
             self.renew_status = True
         else:
             self.renew_status = False
+
+
+class Single_bar:
+    
+    """
+    用来生成单品种的K线
+    
+    """
+
+    def __init__(self, strategy:StrategyTemplate, vt_symbol:str):
+        """"""
+        # 和portfolio的接口
+        self.portfolio= strategy
+        self.vt_symbol = vt_symbol
+        self.am_size = self.portfolio.hedge_ratio_window + 50
+        
+        # 需要合成的K线周期设置
+        self.bar_interval = self.portfolio.bar_interval
+        self.bar_frequency = self.portfolio.bar_frequency
+
+
+        # K线合成工具和储存容器
+        self.bg = BarGenerator(self.on_bar, self.bar_interval, self.on_5min_bar,self.bar_frequency)
+        self.am = ArrayManager(size=self.am_size)
+        
+        # K线合成计数
+        self.bar_count  = 0
+
+
+    def on_bar(self, bar: BarData):
+        """
+        Callback of new bar data update.
+        """
+        self.bg.update_bar(bar)
+
+    def on_5min_bar(self, bar: BarData):
+        """"""
+        self.bar_count += 1
+        self.am.update_bar(bar)

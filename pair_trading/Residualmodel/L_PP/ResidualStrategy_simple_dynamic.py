@@ -36,19 +36,19 @@ class DynamicResidualModelStrategy(StrategyTemplate):
     intercept: float = 0
 
     # 策略内动态调整周期
-    renew_interval: int = 7
-    hedge_ratio_window: int = 90
+    renew_interval: int = 3
+    hedge_ratio_window: int = 30
 
     #轨道宽度
-    entry_multiplier: float = 3.5
+    entry_multiplier: float = 2.5
 
 
     # 预期价差盈利
-    difference_filter_num: float = 30
+    difference_filter_num: float = 20
     # 预期止盈为预期价差盈利的1/2
 
     # 指标计算参数
-    std_window = 80
+    std_window = 40
 
 
     #固定下单单位

@@ -111,8 +111,8 @@ if __name__ == '__main__':
     strategy_settings['strategy_class'] = DynamicResidualModelStrategy
     strategy_settings['vt_symbols'] = ["V888.DCE", 'PP888.DCE']
     strategy_settings['interval'] = Interval.MINUTE
-    strategy_settings['start'] = datetime(2019, 3, 1 )
-    strategy_settings['end'] = datetime(2019, 10, 1)
+    strategy_settings['start'] = datetime(2019, 3, 31)
+    strategy_settings['end'] = datetime(2019, 10, 31)
     strategy_settings['rates'] = {"V888.DCE": 5/10000, "PP888.DCE": 5/10000}
     strategy_settings['slippages'] = {"V888.DCE": 1, "PP888.DCE": 0.5}
     strategy_settings['sizes'] = {"V888.DCE":5, "PP888.DCE":5}

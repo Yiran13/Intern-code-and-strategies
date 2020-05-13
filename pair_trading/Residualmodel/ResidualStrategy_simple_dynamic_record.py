@@ -37,18 +37,20 @@ class DynamicResidualModelStrategy(StrategyTemplate):
 
     # 策略内动态调整周期
     renew_interval: int = 7
-    hedge_ratio_window: int = 90
+    hedge_ratio_window: int = 7*240
 
     #轨道宽度
-    entry_multiplier: float = 3.5
+    entry_multiplier: float = 2.5
 
 
     # 预期价差盈利
-    difference_filter_num: float = 30
+    difference_filter_num: float = 10
+    difference_exit_num: float = 0
     # 预期止盈为预期价差盈利的1/2
 
     # 指标计算参数
-    std_window = 80
+    std_window = 320
+    # mean_window =320
 
 
     #固定下单单位
@@ -112,9 +114,9 @@ class DynamicResidualModelStrategy(StrategyTemplate):
         self.long_entry_multiplier =  -abs(self.entry_multiplier)
         self.long_exit_multiplier = 0
 
-        self.mean_window = int(self.std_window / 2)
+        self.mean_window = self.std_window 
 
-        self.difference_exit_num = self.difference_filter_num / 2
+        # self.difference_exit_num = self.difference_filter_num / 2
 
         self.y_symbol = self.vt_symbols[0]
         self.x_symbol = self.vt_symbols[1]
@@ -136,7 +138,10 @@ class DynamicResidualModelStrategy(StrategyTemplate):
         self.ams[self.x_symbol] = ArrayManager(size=self.hedge_ratio_window + 50)
         # 实例化缓存价差价格序列容器
         self.sam = SpreadArrayManager(size=max(self.std_window,self.mean_window)+50)
-
+        self.record_array = []
+        self.record_boll_up = []
+        self.record_boll_down = []
+        self.record_mean = []
 
 
     def on_init(self):
@@ -163,6 +168,8 @@ class DynamicResidualModelStrategy(StrategyTemplate):
     def on_bars(self, bars: Dict[str, BarData]):
         """"""
         self.cancel_all()
+
+        
         # OLS动态线性回归，需要缓存close_array
         self.ams[self.y_symbol].update_bar(bars[self.y_symbol])
         self.ams[self.x_symbol].update_bar(bars[self.x_symbol])
@@ -175,6 +182,7 @@ class DynamicResidualModelStrategy(StrategyTemplate):
         self.spread_value = self.y_multiplier*(bars[self.y_symbol].close_price) - self.x_multiplier*(bars[self.x_symbol].close_price) - self.intercept
         self.spread_volume = min(bars[self.y_symbol].volume, bars[self.x_symbol].volume)
         self.price_diff = self.y_multiplier*(bars[self.y_symbol].close_price) - self.x_multiplier*(bars[self.x_symbol].close_price)
+        self.record_array.append((bars[self.y_symbol].datetime, self.spread_value,self.price_diff))
         self.sam.update_spread(self.spread_value, self.spread_volume)
 
         # 成交量过滤，成交量低于指定阈值将不会进行操作
@@ -194,6 +202,8 @@ class DynamicResidualModelStrategy(StrategyTemplate):
 
         # 计算是否满足做多价差要求
         spread_long_entry = mean + self.long_entry_multiplier * std
+        self.record_boll_down.append((bars[self.y_symbol].datetime, spread_long_entry))
+
         spred_long_exit = mean + self.long_exit_multiplier * std
 
         # 预期收益筛选
@@ -207,6 +217,8 @@ class DynamicResidualModelStrategy(StrategyTemplate):
 
         # 计算是否满足作空价差要求
         spread_short_entry = mean + self.short_entry_multiplier * std
+        self.record_boll_up.append((bars[self.y_symbol].datetime, spread_short_entry))
+
         spread_short_exit = mean + self.short_exit_multiplier * std
 
         # 预期收益筛选
@@ -219,6 +231,7 @@ class DynamicResidualModelStrategy(StrategyTemplate):
         else:
             self.spread_short_enrtry = None
 
+       
         # 获取每个品种持仓
         x_pos = self.get_pos(self.x_symbol)
         y_pos = self.get_pos(self.y_symbol)
@@ -367,12 +380,12 @@ class DynamicResidualModelStrategy(StrategyTemplate):
             self.renew_date = self.last_renew_date + timedelta(days=self.renew_interval)
 
             X = self.ams[self.x_symbol].close[-self.hedge_ratio_window:]
-            X = sm.add_constant(X)
+            
             y = self.ams[self.y_symbol].close[-self.hedge_ratio_window:]
 
             result = sm.OLS(y,X).fit()
-            hedge_ratio = result.params[1]
-            intercept = result.params[0]
+            hedge_ratio = result.params
+            intercept = 0
             for n in range(10):
                     mulitiplier_x = n*hedge_ratio
                     mulitipler_intercept = n*intercept

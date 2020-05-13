@@ -5,10 +5,12 @@ from typing import Dict,List
 from vnpy.trader.constant import (Direction, Offset, Exchange,
                                   Interval, Status)
 from datetime import datetime
-from residualmodel_dynamic import DynamicResidualModelStrategy
+from ResidualStrategy_simple_dynamic import DynamicResidualModelStrategy
 import multiprocessing
 from itertools import product
 import pandas as pd
+
+
 
 
 def optimize(
@@ -105,43 +107,62 @@ def run_optimization(strategy_settings:dict,
 
 
 if __name__ == '__main__':
-
-    # 初始化基本配置
+   # 初始化基本配置
     strategy_settings = {}
     strategy_settings['strategy_class'] = DynamicResidualModelStrategy
-    strategy_settings['vt_symbols'] = ["L888.DCE", 'PP888.DCE']
+    strategy_settings['vt_symbols'] = ["HC888.SHFE", 'RB888.SHFE']
     strategy_settings['interval'] = Interval.MINUTE
-    strategy_settings['start'] = datetime(2019, 3, 1 )
-    strategy_settings['end'] = datetime(2019, 10, 1)
-    strategy_settings['rates'] = {"L888.DCE": 5/10000, "PP888.DCE": 5/10000}
-    strategy_settings['slippages'] = {"L888.DCE": 1, "PP888.DCE": 0.5}
-    strategy_settings['sizes'] = {"L888.DCE":10, "PP888.DCE":5}
-    strategy_settings['priceticks'] = {"L888.DCE":1, "PP888.DCE":1}
-    strategy_settings['capital'] = 1_0000_0,
-    strategy_settings['collection_names'] = {"L888.DCE":"L888", "PP888.DCE":"PP888"}
+    strategy_settings['start'] = datetime(2019, 3, 31)
+    strategy_settings['end'] = datetime(2019, 10, 31)
+    strategy_settings['rates'] = {"HC888.SHFE": 5/10000, "RB888.SHFE": 5/10000}
+    strategy_settings['slippages'] = {"HC888.SHFE": 0.2, "RB888.SHFE": 0.1}
+    strategy_settings['sizes'] = {"HC888.SHFE":10, "RB888.SHFE":10}
+    strategy_settings['priceticks'] = {"HC888.SHFE":2, "RB888.SHFE":1}
+    strategy_settings['capital'] = 1_000_0,
+    strategy_settings['collection_names'] = {"HC888.SHFE":"HC888", "RB888.SHFE":"RB888"}
 
-    # 主要参数
-    short_entry_multiplier_list = [2,3,4,5,6]
-    difference_filter_num_list = [20,40,60,80]
-    std_window_list = [30,60,90,120,150,180]
+    # # 主要参数 第1次优化
+    # entry_multiplier_list = [2,2.5,3,3.5]
+    # difference_filter_num_list = [5,10,12,14,16,18]
+    # std_window_list = [10,20,30,40,50,55]
+
+    # 主要参数 第4次优化
+    entry_multiplier_list = [2,2.5,3,3.5]
+    difference_filter_num_list = [5,10,12,14,16,18]
+
+    std_window_list = [10,20,30,40,50,55]
+    hedge_ratio_window_list = [40,80,120,160,200,240,260]
+    renew_interval_list = [1,2,3,4,5]
+
+    # # 主要参数 第二次优化
+    # short_entry_multiplier_list = [3,4]
+    # difference_filter_num_list = [30,35,40,45,50,55,60]
+    # std_window_list = [60,70,80,90,100,110,120]
+
+    # 主要参数 第三次优化
+    # short_entry_multiplier_list = [2.5,3.5,4.5]
+    # difference_filter_num_list = [20,25,30,35,40,45,50,55]
+    # std_window_list = [70,80,90,100,110]
 
     # 主要参数池
-    product_pool = list(product(short_entry_multiplier_list,difference_filter_num_list,std_window_list))
+    product_pool = list(product(entry_multiplier_list,difference_filter_num_list,std_window_list,hedge_ratio_window_list,renew_interval_list))
 
     # 完整参数池
     param_list = []
     for product in product_pool:
         param_dict = {}
-        short_entry_multiplier,difference_filter_num,std_window = product
-        param_dict['short_entry_multiplier'] = short_entry_multiplier
-        param_dict['long_entry_multiplier'] = -short_entry_multiplier
+        entry_multiplier,difference_filter_num,std_window,hedge_ratio_window,renew_interval = product
+        param_dict['entry_multiplier'] = entry_multiplier
         param_dict['difference_filter_num'] = difference_filter_num
-        param_dict['difference_exit_num'] = difference_filter_num / 3
+        param_dict['difference_exit_num'] = difference_filter_num / 2
         param_dict['std_window'] = std_window
-        param_dict['mean_window'] = std_window /2 
+        param_dict['mean_window'] = std_window / 2
+        param_dict['hedge_ratio_window'] = hedge_ratio_window
+        param_dict['renew_interval'] = renew_interval
+
         param_list.append(param_dict)
 
-    # 参数优化 
+    # 参数优化
     results = run_optimization(strategy_settings, "sharpe_ratio",param_list)
 
     # 参数优化结果处理
@@ -170,5 +191,5 @@ if __name__ == '__main__':
     #转化成DataFrame
     result_df = pd.DataFrame({'param':param_array,'sharpe_ratio':sharpe_array,'max_ddpercent':ddp_array,
                             'max_drawdown_duration':dd_array, 'daily_trade_count': dtc_array})
-    result_df.sort_values('sharpe_ratio',ascending=False,inplace=True)    
-    result_df.to_csv('L_PP_optimization.csv',index=False)
+    result_df.sort_values('sharpe_ratio',ascending=False,inplace=True)
+    result_df.to_csv('HC_RB_simple_optimization_4.csv',index=False)

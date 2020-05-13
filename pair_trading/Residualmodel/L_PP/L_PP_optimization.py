@@ -109,16 +109,16 @@ if __name__ == '__main__':
     # 初始化基本配置
     strategy_settings = {}
     strategy_settings['strategy_class'] = DynamicResidualModelStrategy
-    strategy_settings['vt_symbols'] = ["EG888.DCE", 'PP888.DCE']
+    strategy_settings['vt_symbols'] = ["L888.DCE", 'PP888.DCE']
     strategy_settings['interval'] = Interval.MINUTE
-    strategy_settings['start'] = datetime(2019, 3, 1 )
-    strategy_settings['end'] = datetime(2019, 10, 1)
-    strategy_settings['rates'] = {"EG888.DCE": 5/10000, "PP888.DCE": 5/10000}
-    strategy_settings['slippages'] = {"EG888.DCE": 1, "PP888.DCE": 0.5}
-    strategy_settings['sizes'] = {"EG888.DCE":10, "PP888.DCE":5}
-    strategy_settings['priceticks'] = {"EG888.DCE":1, "PP888.DCE":1}
+    strategy_settings['start'] = datetime(2019, 3, 31)
+    strategy_settings['end'] = datetime(2019, 10, 31)
+    strategy_settings['rates'] = {"L888.DCE": 5/10000, "PP888.DCE": 5/10000}
+    strategy_settings['slippages'] = {"L888.DCE": 1, "PP888.DCE": 0.5}
+    strategy_settings['sizes'] = {"L888.DCE":10, "PP888.DCE":5}
+    strategy_settings['priceticks'] = {"L888.DCE":1, "PP888.DCE":1}
     strategy_settings['capital'] = 1_0000_0,
-    strategy_settings['collection_names'] = {"EG888.DCE":"EG888", "PP888.DCE":"PP888"}
+    strategy_settings['collection_names'] = {"L888.DCE":"L888", "PP888.DCE":"PP888"}
 
     # 主要参数
     short_entry_multiplier_list = [2,3,4,5,6]
@@ -171,4 +171,4 @@ if __name__ == '__main__':
     result_df = pd.DataFrame({'param':param_array,'sharpe_ratio':sharpe_array,'max_ddpercent':ddp_array,
                             'max_drawdown_duration':dd_array, 'daily_trade_count': dtc_array})
     result_df.sort_values('sharpe_ratio',ascending=False,inplace=True)    
-    result_df.to_csv('EG_PP_optimization.csv',index=False)
+    result_df.to_csv('L_PP_optimization.csv',index=False)

@@ -15,10 +15,10 @@ engine = BacktestingEngine()
 engine.set_parameters(
     vt_symbols=["HC888.SHFE", 'RB888.SHFE'],
     interval=Interval.MINUTE,
-    start=datetime(2019, 3, 1 ),
-    end=datetime(2019, 10, 1),
+    start=datetime(2019, 10, 31 ),
+    end=datetime(2020, 5, 1),
     rates={"HC888.SHFE": 5/10000, "RB888.SHFE": 5/10000},
-    slippages={"HC888.SHFE":1, "RB888.SHFE": 0.5},
+    slippages={"HC888.SHFE":0.2, "RB888.SHFE": 0.1},
     sizes={"HC888.SHFE":10, "RB888.SHFE":10},
     priceticks={"HC888.SHFE":2, "RB888.SHFE":1},
     capital=1_000_0,
