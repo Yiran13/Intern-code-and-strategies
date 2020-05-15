@@ -19,8 +19,8 @@ class ZscoreStrategy(StrategyTemplate):
 
     fixed_size1 = 1
     fixed_size2 = 1
-    boll_dev = 3
-    spread_window = 20
+    boll_dev = 3.5
+    spread_window = 100
 
     df = []
     mean = []

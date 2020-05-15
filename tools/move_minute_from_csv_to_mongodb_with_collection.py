@@ -42,8 +42,11 @@ def move_df_to_mongodb(imported_data:pd.DataFrame,collection_name:str):
     print(f'Insert Bar: {count} from {start} - {end}')
 
 def move_rqdata_symbol_to_mongodb(symbol:str,exchange:Exchange, interval:Interval=Interval.MINUTE):
+    '''
+    rqdata 数据源 1分钟数据处理
+    '''
 
-    imported_data = pd.read_csv(f'D:/chorme_download/{symbol}888.csv')
+    imported_data = pd.read_csv(f'D:/chorme_download/{symbol}888 (2).csv')
     imported_data['exchange'] = exchange
     imported_data['interval'] = Interval.MINUTE
     float_columns = ['close', 'high', 'low', 'open', 'volume', 'open_interest']
@@ -66,6 +69,9 @@ def move_rqdata_symbol_to_mongodb(symbol:str,exchange:Exchange, interval:Interva
 
 
 def move_single_symbol_to_mongodb(symbol:str,year:int,exchange:Exchange, interval:Interval=Interval.MINUTE):
+    '''
+    jinshuyuan 数据源 1分钟数据处理
+    '''
     imported_data = pd.read_csv(f'D:/1分钟数据压缩包/FutAC_Min1_Std_{year}/{symbol}主力连续.csv',encoding='gbk')
     imported_data['市场代码'] = exchange
     imported_data['interval'] = Interval.MINUTE
@@ -84,17 +90,15 @@ if __name__ == "__main__":
 
     # 读取需要入库的csv文件，该文件是用gbk编码
     
-    # move_rqdata_symbol_to_mongodb(symbol='HC',exchange=Exchange.SHFE)
-    # move_rqdata_symbol_to_mongodb(symbol='CU',exchange=Exchange.SHFE)
-    # move_rqdata_symbol_to_mongodb(symbol='RB',exchange=Exchange.SHFE)
-    # move_rqdata_symbol_to_mongodb(symbol='NI',exchange=Exchange.SHFE)
-    # move_rqdata_symbol_to_mongodb(symbol='L',exchange=Exchange.DCE)
-    move_rqdata_symbol_to_mongodb(symbol='PP',exchange=Exchange.DCE)
-    move_rqdata_symbol_to_mongodb(symbol='V',exchange=Exchange.DCE)
-    move_rqdata_symbol_to_mongodb(symbol='EG',exchange=Exchange.DCE)
-
-
-    # move_rqdata_symbol_to_mongodb(symbol='RB',exchange=Exchange.SHFE)
+    move_rqdata_symbol_to_mongodb(symbol='HC',exchange=Exchange.SHFE)
+    move_rqdata_symbol_to_mongodb(symbol='RB',exchange=Exchange.SHFE)
+    move_rqdata_symbol_to_mongodb(symbol='CU',exchange=Exchange.SHFE)
+    move_rqdata_symbol_to_mongodb(symbol='RB',exchange=Exchange.SHFE)
+    move_rqdata_symbol_to_mongodb(symbol='NI',exchange=Exchange.SHFE)
+    move_rqdata_symbol_to_mongodb(symbol='L',exchange=Exchange.DCE)
+    move_rqdata_symbol_to_mongodb(symbol='Y',exchange=Exchange.DCE)
+    move_rqdata_symbol_to_mongodb(symbol='P',exchange=Exchange.DCE)
+    # move_rqdata_symbol_to_mongodb(symbol='EG',exchange=Exchange.DCE)
 
     # imported_data = pd.read_csv('D:/1分钟数据压缩包/FutAC_Min1_Std_2016/rb主力连续.csv',encoding='gbk')
     # # 将csv文件中 `市场代码`的 SC 替换成 Exchange.SHFE SHFE

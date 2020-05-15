@@ -155,5 +155,6 @@ if __name__ == '__main__' :
     # bar_data_df = pd.read_csv('C:/Users/lenovo/Desktop/test/IF_bar_data.csv')
     # bar_data_df_if =(bar_data_df.loc[(bar_data_df['symbol'] == 'IF88') & (bar_data_df['interval'] == '1m')]).iloc[:10]
     # move_df_to_sql(bar_data_df_if)
-    imported_data = clean_rqdata_symbol_str('CU',Exchange.SHFE)
+    # imported_data = clean_rqdata_symbol_str('CU',Exchange.SHFE)
+    imported_data = pd.read_csv('C:/Users/lenovo/Documents/WeChat Files/yiranli13/FileStorage/File/2020-05/P_clean.csv')
     move_df_to_sqlite(imported_data)

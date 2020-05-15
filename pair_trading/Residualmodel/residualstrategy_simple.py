@@ -35,11 +35,11 @@ class DynamicResidualModelStrategy(StrategyTemplate):
     hedge_ratio_window: int = 240
 
     #轨道宽度
-    entry_multiplier: float = 3
+    entry_multiplier: float = 2
     price_add = 5
     # 预期价差盈利
     difference_filter_num: float = 30
-    difference_exit_rato: float =  1
+    difference_exit_rato: float =  0.5
     # 预期止盈为预期价差盈利的1/2
     # 指标计算参数
     std_window =  240
@@ -87,8 +87,7 @@ class DynamicResidualModelStrategy(StrategyTemplate):
         "std_window",
         "difference_filter_num"
     ]
-    variables = ["x_multiplier","y_multiplier","spread_value","spread_long_entry","spread_long_exit","spread_long_loss_exit"
-    "spread_short_entry", "spread_short_exit","spread_short_loss_exit","spread_volume_filter"]
+    variables = ["x_multiplier","y_multiplier",'x_pos_target','y_pos_target',"spread_volume_filter"]
 
     def __init__(
         self,
@@ -201,6 +200,7 @@ class DynamicResidualModelStrategy(StrategyTemplate):
 
         
         # OLS动态线性回归，需要缓存close_array
+
         self.ams[self.y_symbol].update_bar(bars[self.y_symbol])
         self.ams[self.x_symbol].update_bar(bars[self.x_symbol])
         # 动态线性回归函数
@@ -209,7 +209,7 @@ class DynamicResidualModelStrategy(StrategyTemplate):
 
         # 计算价差
         # 将价差放入sam 进行后续技术指标计算
-        self.spread_value = self.y_multiplier*(bars[self.y_symbol].close_price) - self.x_multiplier*(bars[self.x_symbol].close_price) - self.intercept
+        self.spread_value = self.y_fixed_size*(bars[self.y_symbol].close_price) - self.x_fixed_size*(bars[self.x_symbol].close_price) - self.intercept
         self.spread_volume = min(bars[self.y_symbol].volume, bars[self.x_symbol].volume)
         self.sam.update_spread(self.spread_value, self.spread_volume)
 
@@ -267,8 +267,8 @@ class DynamicResidualModelStrategy(StrategyTemplate):
                 self.x_pos_target = -self.x_fixed_size
                 self.spread_long_profit_exit = mean + self.long_exit_multiplier * std
                 self.spread_long_loss_exit = self.spread_value - self.difference_exit_num
-                print(self.spread_long_loss_exit,self.spread_long_profit_exit)
-                print(f'时间{bars[self.y_symbol].datetime}','多开   ',f'多{self.y_symbol} {self.y_fixed_size} 手 空{self.x_symbol} {self.x_fixed_size} 手',f'价差{self.spread_value}')
+                # print(self.spread_long_loss_exit,self.spread_long_profit_exit,self.difference_exit_num,self.spread_value - self.difference_exit_num)
+                # print(f'时间{bars[self.y_symbol].datetime}','多开   ',f'多{self.y_symbol} {self.y_fixed_size} 手 空{self.x_symbol} {self.x_fixed_size} 手',f'价差{self.spread_value}')
             
             # 空开
             elif  self.spread_short_entry and self.spread_value >= self.spread_short_entry and self.spread_volume_filter:
@@ -276,8 +276,8 @@ class DynamicResidualModelStrategy(StrategyTemplate):
                 self.x_pos_target = self.x_fixed_size
                 self.spread_short_profit_exit = mean + self.short_exit_multiplier * std
                 self.spread_short_loss_exit = self.spread_value + self.difference_exit_num
-                print(self.spread_short_loss_exit,self.spread_short_profit_exit)
-                print(f'时间{bars[self.y_symbol].datetime}','空开   ',f'空{self.y_symbol} {self.y_fixed_size} 手 多{self.x_symbol} {self.x_fixed_size} 手',f'价差{self.spread_value}')
+                # print(self.spread_short_loss_exit,self.spread_short_profit_exit)
+                # print(f'时间{bars[self.y_symbol].datetime}','空开   ',f'空{self.y_symbol} {self.y_fixed_size} 手 多{self.x_symbol} {self.x_fixed_size} 手',f'价差{self.spread_value}')
                 
         elif self.y_pos > 0 and self.x_pos < 0 :
             # 多平止盈
@@ -285,20 +285,20 @@ class DynamicResidualModelStrategy(StrategyTemplate):
                 self.y_pos_target = 0
                 self.x_pos_target = 0
                 self.last_long_trade_profit = True
-                print(f'时间{bars[self.y_symbol].datetime}','多平 止盈',f'平多{self.y_symbol} {self.y_fixed_size} 手 平空{self.x_symbol} {self.x_fixed_size} 手',f'价差{self.spread_value}')
+                # print(f'时间{bars[self.y_symbol].datetime}','多平 止盈',f'平多{self.y_symbol} {self.y_fixed_size} 手 平空{self.x_symbol} {self.x_fixed_size} 手',f'价差{self.spread_value}')
             # 多平止损
             
             elif self.spread_value <= self.spread_long_loss_exit:
                 self.y_pos_target = 0
                 self.x_pos_target = 0
                 self.last_long_trade_profit = False
-                print(f'时间{bars[self.y_symbol].datetime}','多平 止损',f'平多{self.y_symbol} {self.y_fixed_size} 手 平空{self.x_symbol} {self.x_fixed_size} 手',f'价差{self.spread_value}')
+                # print(f'时间{bars[self.y_symbol].datetime}','多平 止损',f'平多{self.y_symbol} {self.y_fixed_size} 手 平空{self.x_symbol} {self.x_fixed_size} 手',f'价差{self.spread_value}')
              # 多平调参
             
-            # elif self.renew_status:
-            #     self.y_pos_target = 0
-            #     self.x_pos_target = 0
-            #     print(f'时间{bars[self.y_symbol].datetime}','多平 调参',f'平多{self.y_symbol} {self.y_fixed_size} 手 平空{self.x_symbol} {self.x_fixed_size} 手',f'价差{self.spread_value}')
+            elif self.renew_status:
+                self.y_pos_target = 0
+                self.x_pos_target = 0
+                # print(f'时间{bars[self.y_symbol].datetime}','多平 调参',f'平多{self.y_symbol} {self.y_fixed_size} 手 平空{self.x_symbol} {self.x_fixed_size} 手',f'价差{self.spread_value}')
 
         elif self.y_pos < 0 and self.x_pos > 0:
 
@@ -306,18 +306,18 @@ class DynamicResidualModelStrategy(StrategyTemplate):
                 self.y_pos_target = 0
                 self.x_pos_target = 0 
                 self.last_short_trade_profit = True
-                print(f'时间{bars[self.y_symbol].datetime}','空平 止盈',f'平空{self.y_symbol} {self.y_fixed_size} 手 平多{self.x_symbol} {self.x_fixed_size} 手',f'价差{self.spread_value}')
+                # print(f'时间{bars[self.y_symbol].datetime}','空平 止盈',f'平空{self.y_symbol} {self.y_fixed_size} 手 平多{self.x_symbol} {self.x_fixed_size} 手',f'价差{self.spread_value}')
             
             elif self.spread_value >= self.spread_short_loss_exit:
                 self.y_pos_target = 0
                 self.x_pos_target = 0 
                 self.last_short_trade_profit = False
-                print(f'时间{bars[self.y_symbol].datetime}','空平 止损',f'平空{self.y_symbol} {self.y_fixed_size} 手 平多{self.x_symbol} {self.x_fixed_size} 手',f'价差{self.spread_value}')
+                # print(f'时间{bars[self.y_symbol].datetime}','空平 止损',f'平空{self.y_symbol} {self.y_fixed_size} 手 平多{self.x_symbol} {self.x_fixed_size} 手',f'价差{self.spread_value}')
             
-            # elif self.renew_status:
-            #     self.y_pos_target = 0
-            #     self.x_pos_target = 0 
-            #     print(f'时间{bars[self.y_symbol].datetime}','空平 调参',f'平空{self.y_symbol} {self.y_fixed_size} 手 平多{self.x_symbol} {self.x_fixed_size} 手',f'价差{self.spread_value}')
+            elif self.renew_status:
+                self.y_pos_target = 0
+                self.x_pos_target = 0 
+                # print(f'时间{bars[self.y_symbol].datetime}','空平 调参',f'平空{self.y_symbol} {self.y_fixed_size} 手 平多{self.x_symbol} {self.x_fixed_size} 手',f'价差{self.spread_value}')
 
 
         target = {self.x_symbol:self.x_pos_target,

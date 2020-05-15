@@ -7,16 +7,16 @@ from z_score import ZscoreStrategy
 engine = BacktestingEngine()
 
 engine.set_parameters(
-    vt_symbols=["HC888.SHFE", 'RB888.SHFE'],
+    vt_symbols=["Y888.DCE", 'P888.DCE'],
     interval=Interval.MINUTE,
-    start=datetime(2019, 3, 1 ),
-    end=datetime(2019, 10, 1),
-    rates={"HC888.SHFE": 5/10000, "RB888.SHFE": 5/10000},
-    slippages={"HC888.SHFE":1, "RB888.SHFE": 0.5},
-    sizes={"HC888.SHFE":10, "RB888.SHFE":10},
-    priceticks={"HC888.SHFE":2, "RB888.SHFE":1},
-    capital=1_000_0,
-    collection_names={"HC888.SHFE":"HC888", "RB888.SHFE":"RB888"}
+    start=datetime(2019, 1, 1 ),
+    end=datetime(2019, 6, 30),
+    rates={"Y888.DCE": 3/10000, "P888.DCE": 3/10000},
+    slippages={"Y888.DCE":0.2, "P888.DCE": 0.2},
+    sizes={"Y888.DCE":10, "P888.DCE":10},
+    priceticks={"Y888.DCE":2, "P888.DCE":2},
+    capital=1_000_00,
+    collection_names={"Y888.DCE":"Y888", "P888.DCE":"P888"}
 
 )
 engine.add_strategy(ZscoreStrategy, {})
