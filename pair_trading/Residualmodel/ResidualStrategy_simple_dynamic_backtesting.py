@@ -17,8 +17,8 @@ engine = BacktestingEngine()
 engine.set_parameters(
     vt_symbols=["HC888.SHFE", 'RB888.SHFE'],
     interval=Interval.MINUTE,
-    start=datetime(2014, 12, 31 ),
-    end=datetime(2015,4, 1),
+    start=datetime(2019, 1, 31 ),
+    end=datetime(2019,7, 31),
     rates={"HC888.SHFE": 5/10000, "RB888.SHFE": 5/10000},
     slippages={"HC888.SHFE":2, "RB888.SHFE": 1},
     sizes={"HC888.SHFE":10, "RB888.SHFE":10},
@@ -27,7 +27,8 @@ engine.set_parameters(
     collection_names={"HC888.SHFE":"HC888", "RB888.SHFE":"RB888"}
 
 )
-engine.add_strategy(DynamicResidualModelStrategy, {'profit_pct':1,'boll_up_cum_threshold':10 })
+# 突破类型的
+engine.add_strategy(DynamicResidualModelStrategy, {'boll_up_cum_threshold':10,'hold_window':240*80,'profit_point':20,'exit_point':-10 })
 engine.load_data()
 engine.run_backtesting()
 df = engine.calculate_result()

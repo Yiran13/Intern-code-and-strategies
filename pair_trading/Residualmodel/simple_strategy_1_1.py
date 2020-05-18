@@ -32,8 +32,10 @@ class DynamicResidualModelStrategy(StrategyTemplate):
 
     # 退出条件
     hold_window: int = 100
-    profit_pct: float = 0.2
-    exit_pct: float = -0.06
+    profit_point: float = 20
+    exit_point: float = -5
+    # profit_pct: float = 0.2
+    # exit_pct: float = -0.06
 
     #轨道宽度
     entry_multiplier: float = 3
@@ -79,6 +81,10 @@ class DynamicResidualModelStrategy(StrategyTemplate):
         'entry_multiplier',
         "fixed_size",
         "std_window",
+        'profit_point',
+        'exit_point',
+        'hold_window',
+        'boll_up_cum_threshold'
     ]
     variables = ["x_multiplier","y_multiplier",'x_pos_target','y_pos_target',"spread_volume_filter"]
 
@@ -241,24 +247,29 @@ class DynamicResidualModelStrategy(StrategyTemplate):
             self.boll_up_cum = 0
             if self.start_order:
                 # 近似实际开仓价格
-                self.spread_long_profit_exit = self.spread_value*(1+self.profit_pct)
-                self.spread_long_loss_exit = self.spread_value*(1+self.exit_pct)
+                # self.spread_long_profit_exit = self.spread_value*(1+self.profit_pct)
+                self.spread_long_profit_exit = self.spread_value+self.profit_point
+                # self.spread_long_loss_exit = self.spread_value*(1+self.exit_pct)
+                self.spread_long_loss_exit = self.spread_value+self.exit_point
                 self.start_order = False
 
             # 持仓周期计算
             if self.hold_time < self.hold_window:
                 self.hold_time += 1
-            else:
-                
+            elif self.hold_time >= self.hold_window:
+
                 self.y_pos_target = 0
                 self.x_pos_target = 0
                 self.last_long_trade_profit = None
-
+                
+                print(f'时间{bars[self.y_symbol].datetime}','多平 超出持仓时间',f'平多{self.y_symbol} {self.y_fixed_size} 手 平空{self.x_symbol} {self.x_fixed_size} 手',f'价差{self.spread_value} {self.hold_time} {self.profit_point}') 
+                self.hold_time = 0
             # 多平止盈
             if self.spread_value >= self.spread_long_profit_exit:
                 self.y_pos_target = 0
                 self.x_pos_target = 0
                 self.last_long_trade_profit = True
+                self.hold_time = 0
                 print(f'时间{bars[self.y_symbol].datetime}','多平 止盈',f'平多{self.y_symbol} {self.y_fixed_size} 手 平空{self.x_symbol} {self.x_fixed_size} 手',f'价差{self.spread_value}')
             # 多平止损
             
@@ -266,6 +277,7 @@ class DynamicResidualModelStrategy(StrategyTemplate):
                 self.y_pos_target = 0
                 self.x_pos_target = 0
                 self.last_long_trade_profit = False
+                self.hold_time = 0
                 print(f'时间{bars[self.y_symbol].datetime}','多平 止损',f'平多{self.y_symbol} {self.y_fixed_size} 手 平空{self.x_symbol} {self.x_fixed_size} 手',f'价差{self.spread_value}')
        
 
