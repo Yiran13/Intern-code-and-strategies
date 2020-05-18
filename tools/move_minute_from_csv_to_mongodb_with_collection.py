@@ -46,7 +46,7 @@ def move_rqdata_symbol_to_mongodb(symbol:str,exchange:Exchange, interval:Interva
     rqdata 数据源 1分钟数据处理
     '''
 
-    imported_data = pd.read_csv(f'D:/chorme_download/{symbol}888 (2).csv')
+    imported_data = pd.read_csv(f'D:/chorme_download/{symbol}888.csv')
     imported_data['exchange'] = exchange
     imported_data['interval'] = Interval.MINUTE
     float_columns = ['close', 'high', 'low', 'open', 'volume', 'open_interest']
@@ -93,7 +93,7 @@ if __name__ == "__main__":
     move_rqdata_symbol_to_mongodb(symbol='HC',exchange=Exchange.SHFE)
     move_rqdata_symbol_to_mongodb(symbol='RB',exchange=Exchange.SHFE)
     move_rqdata_symbol_to_mongodb(symbol='CU',exchange=Exchange.SHFE)
-    move_rqdata_symbol_to_mongodb(symbol='RB',exchange=Exchange.SHFE)
+    # move_rqdata_symbol_to_mongodb(symbol='RB',exchange=Exchange.SHFE)
     move_rqdata_symbol_to_mongodb(symbol='NI',exchange=Exchange.SHFE)
     move_rqdata_symbol_to_mongodb(symbol='L',exchange=Exchange.DCE)
     move_rqdata_symbol_to_mongodb(symbol='Y',exchange=Exchange.DCE)
