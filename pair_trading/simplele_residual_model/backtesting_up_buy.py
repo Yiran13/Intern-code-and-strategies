@@ -2,7 +2,7 @@ from datetime import datetime
 from vnpy.app.portfolio_strategy import BacktestingEngine
 from vnpy.trader.constant import Interval
 # from residualstrategy_simple import DynamicResidualModelStrategy
-from simple_strategy_1_1 import DynamicResidualModelStrategy
+from Simple_boll_up_buy import SimpleBollupBuy
 # from residualstrategy_simple_with_moving_exit import DynamicResidualModelStrategy
 # from trend_following_version1 import ATR_RSI_Strategy
 # from portfolio_signals import TredningFollowingSignals
@@ -17,7 +17,7 @@ engine = BacktestingEngine()
 engine.set_parameters(
     vt_symbols=["HC888.SHFE", 'RB888.SHFE'],
     interval=Interval.MINUTE,
-    start=datetime(2015, 1, 1 ),
+    start=datetime(2017, 1, 1 ),
     end=datetime(2019,12, 31),
     rates={"HC888.SHFE": 5/10000, "RB888.SHFE": 5/10000},
     slippages={"HC888.SHFE":2, "RB888.SHFE": 1},
@@ -28,9 +28,12 @@ engine.set_parameters(
 
 )
 # 突破类型的
-engine.add_strategy(DynamicResidualModelStrategy, {'boll_up_cum_threshold':10,'hold_window':240*80,'profit_point':300,'exit_point':-20,'day_cum_threshold':30 })
+engine.add_strategy(SimpleBollupBuy, {'boll_up_cum_threshold':10,'hold_window':240*80,'profit_point':200,'exit_point':-40,'day_cum_threshold':5 })
 engine.load_data()
 engine.run_backtesting()
 df = engine.calculate_result()
 engine.calculate_statistics()
 engine.show_chart()
+
+
+# %%

@@ -20,8 +20,9 @@ import talib
 from datetime import datetime, timedelta
 import statsmodels.tsa.stattools as ts
 import statsmodels.api as sm
-#add constraint per day one loss trade 
-class DynamicResidualModelStrategy(StrategyTemplate):
+#add constraint per day one loss trade
+#  
+class SimpleBollupBuy(StrategyTemplate):
 
     """"""
 
@@ -40,6 +41,10 @@ class DynamicResidualModelStrategy(StrategyTemplate):
     #轨道宽度
     entry_multiplier: float = 3
     price_add = 2
+
+    # 可交易的价差范围
+    spread_low_range = 150 
+    spread_high_range = 300
     
     # 指标计算参数
     std_window =  240*30
@@ -64,21 +69,14 @@ class DynamicResidualModelStrategy(StrategyTemplate):
     spread_long_exit: float = 0
     spread_long_loss_exit: float = 0
 
-    spread_short_entry: float = 0
-    spread_short_exit: float = 0
-    spread_short_loss_exit: float =0
 
-    #用来判断操作价差的方向
-    open_direction_dict: Dict[str, float] = {}
-    close_direction_dict: Dict[str, float] = {}
+
     boll_up_cum = 0
-
     day_cum = 0
     day_cum_threshold = 5
 
     # 盈利记录
     last_long_trade_profit:bool = False
-    last_short_trade_profit:bool = False
     trade_date:datetime = None
     stop_trade_date = 5
 
@@ -86,11 +84,14 @@ class DynamicResidualModelStrategy(StrategyTemplate):
         'entry_multiplier',
         "fixed_size",
         "std_window",
+        'std_mean_window_ratio',
         'profit_point',
         'exit_point',
         'hold_window',
         'boll_up_cum_threshold',
-        'day_cum_threshold'
+        'day_cum_threshold',
+        'spread_low_range',
+        'spread_high_range'
     ]
     variables = ["x_multiplier","y_multiplier",'x_pos_target','y_pos_target',"spread_volume_filter"]
 
@@ -210,14 +211,10 @@ class DynamicResidualModelStrategy(StrategyTemplate):
                 self.trade_date = bars[self.y_symbol].datetime 
                 self.day_cum +=1
                 print(self.trade_date.date(), bars[self.y_symbol].datetime.date(),self.day_cum)
+            
             if self.day_cum > self.day_cum_threshold:
                 self.day_cum = 0
                 self.last_long_trade_profit = True
-            
-
-        # print(self.trade_date.date())
-        # print(self.next_trade.date())
-
             
             
 
@@ -243,6 +240,7 @@ class DynamicResidualModelStrategy(StrategyTemplate):
         mean = sam.sma(self.mean_window)
         # 计算是否满足做多价差要求
         spread_long_entry = mean + self.long_entry_multiplier * std
+        # 计算连续突破的个数
         if self.spread_value > spread_long_entry: 
             self.boll_up_cum += 1
         else:
@@ -258,7 +256,7 @@ class DynamicResidualModelStrategy(StrategyTemplate):
             # 多开
             if  self.boll_up_cum>self.boll_up_cum_threshold and self.spread_value >= self.spread_long_entry and self.spread_volume_filter:
                 #if self.last_long_trade_profit: 
-                if self.last_long_trade_profit and 200<self.spread_value<400:
+                if self.last_long_trade_profit and self.spread_low_range<self.spread_value<self.spread_high_range:
                     self.y_pos_target = self.y_fixed_size
                     self.x_pos_target = -self.x_fixed_size
                     self.hold_time = 0
