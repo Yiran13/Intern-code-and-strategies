@@ -20,7 +20,7 @@ import talib
 from datetime import datetime, timedelta
 import statsmodels.tsa.stattools as ts
 import statsmodels.api as sm
-
+#add constraint per day one loss trade 
 class DynamicResidualModelStrategy(StrategyTemplate):
 
     """"""
@@ -73,9 +73,14 @@ class DynamicResidualModelStrategy(StrategyTemplate):
     close_direction_dict: Dict[str, float] = {}
     boll_up_cum = 0
 
+    day_cum = 0
+    day_cum_threshold = 5
+
     # 盈利记录
     last_long_trade_profit:bool = False
     last_short_trade_profit:bool = False
+    trade_date:datetime = None
+    stop_trade_date = 5
 
     parameters = [
         'entry_multiplier',
@@ -84,7 +89,8 @@ class DynamicResidualModelStrategy(StrategyTemplate):
         'profit_point',
         'exit_point',
         'hold_window',
-        'boll_up_cum_threshold'
+        'boll_up_cum_threshold',
+        'day_cum_threshold'
     ]
     variables = ["x_multiplier","y_multiplier",'x_pos_target','y_pos_target',"spread_volume_filter"]
 
@@ -192,11 +198,32 @@ class DynamicResidualModelStrategy(StrategyTemplate):
     def on_bars(self, bars: Dict[str, BarData]):
         """"""
         self.cancel_all()
+        #初始化
+        if not self.trade_date:
+            self.trade_date = (bars[self.y_symbol].datetime)
+            self.last_long_trade_profit = True
+        
+        # 一笔交易亏损停止交易天数
+        if not self.last_long_trade_profit:
 
+            if self.trade_date.date() != bars[self.y_symbol].datetime.date():
+                self.trade_date = bars[self.y_symbol].datetime 
+                self.day_cum +=1
+                print(self.trade_date.date(), bars[self.y_symbol].datetime.date(),self.day_cum)
+            if self.day_cum > self.day_cum_threshold:
+                self.day_cum = 0
+                self.last_long_trade_profit = True
+            
 
+        # print(self.trade_date.date())
+        # print(self.next_trade.date())
+
+            
+            
 
         # 计算价差
         # 将价差放入sam 进行后续技术指标计算
+        
         self.spread_value = self.y_fixed_size*(bars[self.y_symbol].close_price) - self.x_fixed_size*(bars[self.x_symbol].close_price)
         self.spread_volume = min(bars[self.y_symbol].volume, bars[self.x_symbol].volume)
         self.sam.update_spread(self.spread_value, self.spread_volume)
@@ -230,14 +257,16 @@ class DynamicResidualModelStrategy(StrategyTemplate):
         if self.x_pos == 0 and self.y_pos == 0:
             # 多开
             if  self.boll_up_cum>self.boll_up_cum_threshold and self.spread_value >= self.spread_long_entry and self.spread_volume_filter:
-                self.y_pos_target = self.y_fixed_size
-                self.x_pos_target = -self.x_fixed_size
-
-                self.hold_time = 0
-                self.start_order = True
-                self.boll_up_cum = 0
+                #if self.last_long_trade_profit: 
+                if self.last_long_trade_profit and 200<self.spread_value<400:
+                    self.y_pos_target = self.y_fixed_size
+                    self.x_pos_target = -self.x_fixed_size
+                    self.hold_time = 0
+                    self.start_order = True
+                    self.boll_up_cum = 0
+                    self.trade_date = (bars[self.y_symbol].datetime)
                 # print(self.spread_long_loss_exit,self.spread_long_profit_exit,self.difference_exit_num,self.spread_value - self.difference_exit_num)
-                print(f'时间{bars[self.y_symbol].datetime}','多开   ',f'多{self.y_symbol} {self.y_fixed_size} 手 空{self.x_symbol} {self.x_fixed_size} 手',f'价差{self.spread_value}')
+                    print(f'时间{bars[self.y_symbol].datetime}','多开   ',f'多{self.y_symbol} {self.y_fixed_size} 手 空{self.x_symbol} {self.x_fixed_size} 手',f'价差{self.spread_value}')
             else:
                 self.start_order = False
                 return
@@ -251,6 +280,7 @@ class DynamicResidualModelStrategy(StrategyTemplate):
                 self.spread_long_profit_exit = self.spread_value+self.profit_point
                 # self.spread_long_loss_exit = self.spread_value*(1+self.exit_pct)
                 self.spread_long_loss_exit = self.spread_value+self.exit_point
+                self.trade_date = bars[self.y_symbol].datetime
                 self.start_order = False
 
             # 持仓周期计算
@@ -260,16 +290,18 @@ class DynamicResidualModelStrategy(StrategyTemplate):
 
                 self.y_pos_target = 0
                 self.x_pos_target = 0
-                self.last_long_trade_profit = None
+                self.trade_date =(bars[self.y_symbol].datetime)
+                self.last_long_trade_profit = False
                 
-                print(f'时间{bars[self.y_symbol].datetime}','多平 超出持仓时间',f'平多{self.y_symbol} {self.y_fixed_size} 手 平空{self.x_symbol} {self.x_fixed_size} 手',f'价差{self.spread_value} {self.hold_time} {self.profit_point}') 
+                print(f'时间{bars[self.y_symbol].datetime}','多平 超出持仓时间',f'平多{self.y_symbol} {self.y_fixed_size} 手 平空{self.x_symbol} {self.x_fixed_size} 手',f'价差{self.spread_value} {self.hold_time} {self.profit_point}{self.trade_date}{self.last_long_trade_profit}') 
                 self.hold_time = 0
             # 多平止盈
             if self.spread_value >= self.spread_long_profit_exit:
                 self.y_pos_target = 0
                 self.x_pos_target = 0
-                self.last_long_trade_profit = True
+                self.last_long_trade_profit = False
                 self.hold_time = 0
+                self.trade_date =(bars[self.y_symbol].datetime)
                 print(f'时间{bars[self.y_symbol].datetime}','多平 止盈',f'平多{self.y_symbol} {self.y_fixed_size} 手 平空{self.x_symbol} {self.x_fixed_size} 手',f'价差{self.spread_value}')
             # 多平止损
             
@@ -278,6 +310,7 @@ class DynamicResidualModelStrategy(StrategyTemplate):
                 self.x_pos_target = 0
                 self.last_long_trade_profit = False
                 self.hold_time = 0
+                self.trade_date = (bars[self.y_symbol].datetime)
                 print(f'时间{bars[self.y_symbol].datetime}','多平 止损',f'平多{self.y_symbol} {self.y_fixed_size} 手 平空{self.x_symbol} {self.x_fixed_size} 手',f'价差{self.spread_value}')
        
 
